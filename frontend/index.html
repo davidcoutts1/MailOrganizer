@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Inbox Viewer</title>
+
+<!-- ───────────  CSS  ─────────── -->
+<style>
+/* === theme palette === */
+:root{
+  --brand:#0b57d0;
+  --brand-light:#e6efff;
+  --accent:#ffc400;
+  --bg-from:#f7f9fc;
+  --bg-to:#eef1f6;
+  --surface:#ffffff;
+  --border:#d9dee9;
+  --radius:8px;
+  --shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+/* === page layout === */
+html,body{margin:0;height:100%}
+body{
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",sans-serif;
+  background:linear-gradient(180deg,var(--bg-from),var(--bg-to));
+  color:#202635;
+}
+.container{
+  max-width:1160px;margin:40px auto;padding:0 20px;
+  animation:fade .35s ease;
+}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* === buttons & tabs === */
+.icon-btn{
+  width:38px;height:38px;border:none;border-radius:50%;
+  background:var(--brand);color:#fff;font-size:1.05rem;font-weight:600;
+  display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;margin-right:10px;transition:background .15s;
+}
+.icon-btn:hover:enabled{background:#094bb4}
+.icon-btn:disabled{background:#99afd6;cursor:not-allowed}
+
+.tab{
+  background:#d8e0f4;color:#14408c;border:none;padding:.55rem 1.35rem;
+  border-radius:var(--radius);font-weight:600;cursor:pointer;margin-right:.7rem
+}
+.tab.active{background:var(--brand);color:#fff}
+
+/* === account colour legend (up to 10) === */
+.acc-dot{
+  display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;
+}
+.acc0{background:#ff6f00}.acc1{background:#da20d2}
+.acc2{background:#007bff}.acc3{background:#00b36b}
+.acc4{background:#cc0000}.acc5{background:#9c27b0}
+.acc6{background:#ff9800}.acc7{background:#00897b}
+.acc8{background:#455a64}.acc9{background:#795548}
+
+/* === account chips === */
+.acct-chip{
+  display:inline-flex;align-items:center;background:#e4e9f6;
+  color:#12356c;font-size:.83rem;font-weight:500;border-radius:16px;
+  padding:4px 10px 4px 12px;margin-right:8px;user-select:none
+}
+.acct-chip button{
+  margin-left:8px;border:none;background:transparent;color:#12356c;
+  font-size:13px;cursor:pointer;padding:0 4px;
+}
+.acct-chip button:hover{color:#d62828}
+
+/* === timeline table === */
+table{
+  width:100%;border-collapse:collapse;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin-top:20px
+}
+th,td{padding:.78rem .95rem;text-align:left}
+th{background:var(--brand);color:#fff;font-weight:600}
+tbody tr:nth-child(even){background:#f5f7fc}
+tbody tr:hover{background:var(--brand-light);cursor:pointer}
+/* ── thicker divider ── */                     /* <<  CHANGED  */
+tbody tr{animation:rowFade .25s;border-bottom:2px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+@keyframes rowFade{from{opacity:0}to{opacity:1}}
+
+/* === smart inbox === */
+.bucket{margin-top:22px;border-radius:var(--radius);box-shadow:var(--shadow)}
+.bucket-header{
+  padding:.7rem 1rem;font-weight:600;color:#fff;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;user-select:none
+}
+.bucket-body{
+  background:var(--surface);border:1px solid var(--border);
+  border-top:none;border-radius:0 0 var(--radius) var(--radius);display:none
+}
+.bucket.open .bucket-body{display:block}
+
+.item{
+  display:flex;justify-content:space-between;gap:1rem;
+  padding:.7rem 1rem;
+  /* ── thicker divider ── */                   /* <<  CHANGED  */
+  border-bottom:2px solid var(--border);
+  cursor:pointer;animation:itemFade .18s
+}
+.bucket-body .item:last-child{border-bottom:none}  /* keep bottom clean */
+@keyframes itemFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.item:hover{background:#f1f4fd}
+.item:nth-child(even){background:#fafcff}
+.item-subject{flex:2}
+.item-from{flex:1;font-weight:500;color:#444}
+.item-date{white-space:nowrap;color:#5a627a;font-size:.83rem}
+
+.badge{
+  background:rgba(255,255,255,.25);
+  padding:.15rem .55rem;border-radius:9999px;font-size:.85rem
+}
+.dot{
+  display:inline-block;width:8px;height:8px;
+  background:var(--accent);border-radius:50%;margin-left:6px;
+  box-shadow:0 0 0 2px rgba(255,255,255,.45);
+}
+.bucket-dot{cursor:pointer}
+
+/* === modal viewer === */
+#viewer{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  display:none;align-items:center;justify-content:center;z-index:99
+}
+.modal{
+  width:clamp(620px,92vw,1000px);height:95vh;
+  background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:1.25rem 2rem 1.75rem;
+  display:flex;flex-direction:column;overflow:hidden;
+  animation:pop .18s ease-out;
+}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.close-btn{
+  background:#c7ccd8;border:none;border-radius:50%;width:30px;height:30px;
+  line-height:30px;text-align:center;float:right;cursor:pointer;font-size:14px
+}
+.close-btn:hover{background:#b7bdca}
+</style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- view tabs -->
+    <button id="tabTimeline" class="tab active">Timeline</button>
+    <button id="tabSmart"    class="tab">Smart Inbox</button>
+
+    <!-- nav + add-account -->
+    <div style="margin-top:20px">
+      <button class="icon-btn" id="prevBtn"    title="Previous">&#x25C0;</button>
+      <button class="icon-btn" id="nextBtn"    title="Next">&#x25B6;</button>
+      <button class="icon-btn" id="refreshBtn" title="Refresh">&#x21BB;</button>
+      <button class="icon-btn" id="addBtn"     title="Add Google account">＋</button>
+    </div>
+
+    <!-- connected accounts (dots are prepended via JS) -->
+    <div id="acctBar" style="margin:16px 0;"></div>
+
+    <!-- timeline / smart views -->
+    <table id="timelineTable"></table>
+    <div  id="smartContainer" style="display:none"></div>
+  </div>
+
+  <!-- modal viewer -->
+  <div id="viewer">
+    <div class="modal">
+      <button class="close-btn" id="closeBtn">✕</button>
+      <h2 id="vSubject"></h2>
+      <p id="vMeta" style="color:#555;font-size:.92rem"></p>
+      <div id="vBody" style="white-space:pre-wrap;flex:1 1 auto;"></div>
+    </div>
+  </div>
+
+  <!-- scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
