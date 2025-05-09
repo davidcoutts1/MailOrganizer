@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Mail Organizer Inbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- Bootstrap CSS (modal & layout) -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- DOMPurify for sanitizing email HTML -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+  <style>
+    /* ───────── theme palette & base ───────── */
+    :root {
+      --brand:#0b57d0;
+      --brand-light:#e6efff;
+      --accent:#ffc400;
+      --bg-from:#f7f9fc;
+      --bg-to:#eef1f6;
+      --surface:#ffffff;
+      --border:#d9dee9;
+      --radius:8px;
+      --shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    html,body {
+      margin:0;height:100%;
+      background:linear-gradient(180deg,var(--bg-from),var(--bg-to));
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",sans-serif;
+      color:#202635;
+    }
+    .container{
+      max-width:1160px;
+      margin:40px auto;
+      padding:0 20px;
+      animation:fade .35s ease;
+    }
+    @keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+    /* ───────── tabs & nav buttons ───────── */
+    .tab{
+      background:#d8e0f4;color:#14408c;border:none;
+      padding:.55rem 1.35rem;border-radius:var(--radius);
+      font-weight:600;cursor:pointer;margin-right:.7rem
+    }
+    .tab.active{background:var(--brand);color:#fff}
+    .icon-btn{
+      width:38px;height:38px;border:none;border-radius:50%;
+      background:var(--brand);color:#fff;font-size:1.05rem;
+      font-weight:600;display:inline-flex;align-items:center;
+      justify-content:center;cursor:pointer;margin-right:10px;
+      transition:background .15s
+    }
+    .icon-btn:hover:enabled{background:#094bb4}
+    .icon-btn:disabled{background:#99afd6;cursor:not-allowed}
+
+    /* ───────── account bar ───────── */
+    .acct-chip{
+      display:inline-flex;align-items:center;background:#e4e9f6;
+      color:#12356c;font-size:.83rem;font-weight:500;
+      border-radius:16px;padding:4px 10px 4px 12px;margin-right:8px
+    }
+    .acct-chip button{
+      margin-left:8px;border:none;background:transparent;
+      color:#12356c;font-size:13px;cursor:pointer
+    }
+    .acct-chip button:hover{color:#d62828}
+    .acc-dot{
+      display:inline-block;width:10px;height:10px;
+      border-radius:50%;margin-right:6px
+    }
+    /* up to ten account colors… */
+    .acc-dot {
+      display:inline-block;
+      width:10px; height:10px;
+      border-radius:50%;
+      margin-right:6px;
+    }
+    /* define your 10 colors: */
+    .acc0 { background:#ff6f00; }
+    .acc1 { background:#da20d2; }
+    .acc2 { background:#007bff; }
+    .acc3 { background:#00b36b; }
+    .acc4 { background:#cc0000; }
+    .acc5 { background:#9c27b0; }
+    .acc6 { background:#ff9800; }
+    .acc7 { background:#00897b; }
+    .acc8 { background:#455a64; }
+    .acc9 { background:#795548; }
+
+    /* small “unread” indicator */
+    .dot {
+      display:inline-block;
+      width:8px; height:8px;
+      background:var(--accent);
+      border-radius:50%;
+      margin-left:6px;
+      box-shadow:0 0 0 2px rgba(255,255,255,0.45);
+    }
+
+
+    /* ───────── table ───────── */
+    table{
+      width:100%;border-collapse:collapse;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);box-shadow:var(--shadow);
+      margin-top:20px
+    }
+    th,td{padding:.78rem .95rem;text-align:left}
+    th{background:var(--brand);color:#fff;font-weight:600}
+    tbody tr:nth-child(even){background:#f5f7fc}
+    tbody tr:hover{background:var(--brand-light);cursor:pointer}
+    tbody tr{border-bottom:2px solid var(--border);animation:rowFade .25s}
+    tbody tr:last-child{border-bottom:none}
+    @keyframes rowFade{from{opacity:0}to{opacity:1}}
+
+    /* ───────── buckets ───────── */
+    .bucket{margin-top:22px;border-radius:var(--radius);box-shadow:var(--shadow)}
+    .bucket-header{
+      padding:.7rem 1rem;font-weight:600;color:#fff;
+      display:flex;justify-content:space-between;cursor:pointer
+    }
+    .bucket-body{
+      display:none;background:var(--surface);
+      border:1px solid var(--border);border-top:none;
+      border-radius:0 0 var(--radius) var(--radius)
+    }
+    .bucket.open .bucket-body{display:block}
+    .item{
+      display:flex;justify-content:space-between;gap:1rem;
+      padding:.7rem 1rem;border-bottom:2px solid var(--border);
+      animation:itemFade .18s;cursor:pointer
+    }
+    .bucket-body .item:last-child{border-bottom:none}
+    @keyframes itemFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+    .item:hover{background:#f1f4fd}
+    .item-from{flex:1;font-weight:500}
+    .item-subject{flex:2}
+    .item-date{white-space:nowrap;color:#5a627a;font-size:.83rem}
+
+    /* ───────── unread-dot ───────── */
+    .dot{
+      display:inline-block;width:8px;height:8px;
+      background:var(--accent);border-radius:50%;
+      margin-left:6px;box-shadow:0 0 0 2px rgba(255,255,255,.45)
+    }
+
+    .badge{
+      background:rgba(255,255,255,.25);
+      padding:.15rem .55rem;border-radius:9999px;
+      font-size:.85rem
+    }
+
+    /* ───────── viewer modal ───────── */
+    #viewer{
+      position:fixed;inset:0;background:rgba(0,0,0,.55);
+      display:none;align-items:center;justify-content:center;z-index:99
+    }
+    #viewer .modal{
+      width:clamp(620px,92vw,1000px);height:95vh;
+      background:var(--surface);border-radius:var(--radius);
+      box-shadow:var(--shadow);padding:1.25rem 2rem 1.75rem;
+      display:flex;flex-direction:column;overflow:hidden;
+      animation:pop .18s ease-out
+    }
+    @keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+    .close-btn{
+      background:#c7ccd8;border:none;border-radius:50%;
+      width:30px;height:30px;cursor:pointer;font-size:14px;float:right
+    }
+    .close-btn:hover{background:#b7bdca}
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- tabs + customize -->
+    <div class="d-flex align-items-center mb-3">
+      <button id="tabTimeline" class="tab active">Timeline</button>
+      <button id="tabSmart"    class="tab ms-2">Smart Inbox</button>
+      <button id="customizeBucketsBtn"
+              class="btn btn-sm btn-outline-secondary ms-auto"
+              style="display:none">
+        Customize Buckets
+      </button>
+    </div>
+
+    <!-- nav -->
+    <div style="margin-top:20px">
+      <button id="prevBtn"    class="icon-btn" title="Previous">◀</button>
+      <button id="nextBtn"    class="icon-btn" title="Next">▶</button>
+      <button id="refreshBtn" class="icon-btn" title="Refresh">↻</button>
+      <button id="addBtn"     class="icon-btn" title="Add account">＋</button>
+    </div>
+
+    <!-- accounts -->
+    <div id="acctBar" style="margin:16px 0;"></div>
+
+    <!-- main views -->
+    <table id="timelineTable"></table>
+    <div id="smartContainer" style="display:none"></div>
+  </div>
+
+  <!-- customize‐buckets modal -->
+  <div class="modal fade" id="bucketModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Pick up to 8 Buckets</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="bucketOptionsContainer" class="row gy-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveBucketsBtn" class="btn btn-primary" disabled>Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- viewer modal -->
+  <div id="viewer">
+    <div class="modal">
+      <button class="close-btn" id="closeBtn">✕</button>
+      <h2 id="vSubject"></h2>
+      <p id="vMeta" style="color:#555;font-size:.92rem"></p>
+      <div id="vBody" style="flex:1;overflow:auto;white-space:pre-wrap;"></div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS (modal) -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+  ></script>
+  <!-- your app logic -->
+  <script src="app.js"></script>
+</body>
+</html>
